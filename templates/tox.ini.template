@@ -1,0 +1,90 @@
+[tox]
+envlist = py311,py312,lint,format-check,type,test
+skipsdist = False
+
+[testenv]
+description = Base environment configuration
+setenv =
+    WORKTREE_NAME = {env:WORKTREE_NAME:main}
+    PYTHONPATH = {toxinidir}
+    DEV_PORT = {env:DEV_PORT:8000}
+    FRONTEND_PORT = {env:FRONTEND_PORT:3000}
+
+[testenv:dev]
+description = Run development server with hot reload
+deps =
+    -r requirements.txt
+commands =
+    # Adjust this command based on your framework:
+    # For FastAPI/uvicorn:
+    uvicorn app.main:app --reload --host 0.0.0.0 --port {env:DEV_PORT:8000}
+    # For Flask:
+    # flask run --host 0.0.0.0 --port {env:DEV_PORT:8000}
+    # For Django:
+    # python manage.py runserver 0.0.0.0:{env:DEV_PORT:8000}
+
+[testenv:test]
+description = Run test suite
+deps =
+    -r requirements.txt
+    pytest
+    pytest-cov
+    pytest-asyncio
+commands =
+    pytest {posargs:tests/} -v --cov=app --cov-report=term-missing
+
+[testenv:lint]
+description = Run linting checks
+deps =
+    ruff
+commands =
+    ruff check {posargs:.}
+
+[testenv:format]
+description = Format code
+deps =
+    ruff
+commands =
+    ruff format {posargs:.}
+
+[testenv:format-check]
+description = Check code formatting without making changes
+deps =
+    ruff
+commands =
+    ruff format --check {posargs:.}
+
+[testenv:type]
+description = Run type checking
+deps =
+    -r requirements.txt
+    mypy
+commands =
+    mypy {posargs:app}
+
+[testenv:coverage]
+description = Run tests with coverage report
+deps =
+    -r requirements.txt
+    pytest
+    pytest-cov
+    pytest-asyncio
+commands =
+    pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=html
+
+[testenv:clean]
+description = Clean up build artifacts and caches
+skip_install = true
+allowlist_externals =
+    rm
+    find
+commands =
+    rm -rf build dist *.egg-info .pytest_cache .tox htmlcov .coverage
+    find . -type d -name __pycache__ -exec rm -rf {} +
+    find . -type f -name "*.pyc" -delete
+
+[testenv:frontend]
+description = Run frontend development server (if applicable)
+allowlist_externals = npm
+commands =
+    npm run dev -- --port {env:FRONTEND_PORT:3000}
