@@ -1,0 +1,8 @@
+# Default owner for all files
+* @sqlbyme
+
+# Owners for specific directories
+/docs/ @sqlbyme
+
+# Owner for a specific file
+/LICENSE @sqlbyme
