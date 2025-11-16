@@ -29,7 +29,7 @@ pip install -r requirements.txt
 ### Working Guidelines
 **IMPORTANT:** ALWAYS:
 - Plan work first and record plan in the linear ticket, as a comment to the ticket
-- You may use markdown test to format the comment you add to Linear
+- You may use markdown text to format the comment you add to Linear
 - Once the plan is added, STOP and ask me to review your plan and approve it or update it
 
 **IMPORTANT:** NEVER:
