@@ -57,6 +57,17 @@ When working on this project:
    5. [Add any additional steps - code review, etc.]
    6. Open a pull request in GitHub
 
+#### Reset Branch
+If you're told to "reset branch":
+1. [Optional: Comment in the current ticket with a link to the merge commit for the PR]
+2. [Optional: Mark the current ticket as Done]
+3. Switch to the main branch
+4. Fetch from origin and prune remote branches
+5. Pull main from origin to get up to date
+6. Delete the local working branch
+
+**IMPORTANT:** When deleting local branches, always use `git branch -D` (capital D) if the upstream merge strategy is rebase and merge. Using lowercase `-d` will fail because the branch history has been rewritten.
+
 ### Branch Naming Convention
 Branch naming should follow: `type/description` or `type/ticket/description`
 - Types: `feature`, `fix`, `task`, `docs`, `refactor`

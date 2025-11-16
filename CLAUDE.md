@@ -50,6 +50,15 @@ When working on this project:
    4. If any issues are found, fix those and amend the previous commit
    5. Open a pull request in GitHub
 
+#### Reset Branch
+If you're told to "reset branch":
+1. Switch to the main branch
+2. Fetch from origin and prune remote branches
+3. Pull main from origin to get up to date
+4. Delete the local working branch
+
+**IMPORTANT:** When deleting local branches, always use `git branch -D` (capital D) if the upstream merge strategy is rebase and merge. Using lowercase `-d` will fail because the branch history has been rewritten.
+
 ### Committing Code
 **IMPORTANT:** NEVER commit directly to the main branch:
 - Main branch is protected and does not allow direct pushes
