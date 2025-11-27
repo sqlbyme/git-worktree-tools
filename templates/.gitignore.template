@@ -77,5 +77,8 @@ Thumbs.db
 # Worktree coordination files
 WORKING.lock
 
+# Agent registry (local state, not committed)
+agents.yaml
+
 # Pytest
 .pytest_cache/

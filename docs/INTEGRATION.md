@@ -50,17 +50,6 @@ venv/
 env/
 .venv/
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# Tox
-.tox/
-.pytest_cache/
-
 # Environment files
 .env
 .env.local
@@ -72,29 +61,10 @@ __pycache__/
 *.sqlite3
 dev_*.db
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Agent registry (local state)
+agents.yaml
 
-# Frontend (if applicable)
-node_modules/
-dist/
-build/
-.next/
-.nuxt/
-.cache/
-
-# Logs
-*.log
-logs/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Worktree lock files
+# Worktree coordination files
 WORKING.lock
 ```
 
@@ -114,12 +84,10 @@ DATABASE_URL=sqlite:///./dev.db
 DEBUG=True
 ENVIRONMENT=development
 
-# Worktree Identification (automatically set by create-worktree.sh)
-WORKTREE_NAME=main
+# Agent Identification (automatically set by create-worktree.sh)
+AGENT_NAME=main
 
 # Add your project-specific variables below
-# API_KEY=your-api-key-here
-# SECRET_KEY=your-secret-key-here
 ```
 
 ### Step 5: Update tox.ini (if using tox)
@@ -134,7 +102,7 @@ skipsdist = False
 [testenv]
 description = Base environment configuration
 setenv =
-    WORKTREE_NAME = {env:WORKTREE_NAME:main}
+    AGENT_NAME = {env:AGENT_NAME:main}
     PYTHONPATH = {toxinidir}
 
 [testenv:dev]
@@ -142,13 +110,7 @@ description = Run development server with hot reload
 deps =
     -r requirements.txt
 commands =
-    # Adjust this command based on your project
-    # For FastAPI/uvicorn:
     uvicorn app.main:app --reload --host 0.0.0.0 --port {env:DEV_PORT:8000}
-    # For Flask:
-    # flask run --host 0.0.0.0 --port {env:DEV_PORT:8000}
-    # For Django:
-    # python manage.py runserver 0.0.0.0:{env:DEV_PORT:8000}
 
 [testenv:test]
 description = Run test suite
@@ -156,38 +118,8 @@ deps =
     -r requirements.txt
     pytest
     pytest-cov
-    pytest-asyncio
 commands =
     pytest {posargs:tests/} -v --cov=app --cov-report=term-missing
-
-[testenv:lint]
-description = Run linting checks
-deps =
-    ruff
-commands =
-    ruff check {posargs:.}
-
-[testenv:format]
-description = Format code
-deps =
-    ruff
-commands =
-    ruff format {posargs:.}
-
-[testenv:format-check]
-description = Check code formatting without making changes
-deps =
-    ruff
-commands =
-    ruff format --check {posargs:.}
-
-[testenv:type]
-description = Run type checking
-deps =
-    -r requirements.txt
-    mypy
-commands =
-    mypy {posargs:app}
 ```
 
 ### Step 6: Copy Documentation to Your Project
@@ -201,120 +133,88 @@ cp tools/worktree/docs/CLAUDE_WORKTREE_PROMPT.md docs/
 cp tools/worktree/docs/PARALLEL_DEVELOPMENT_EXAMPLES.md docs/
 ```
 
-### Step 7: Create .claude.md for Mandatory Worktree Usage
+### Step 7: Create .claude.md for Agent-Based Worktree Usage
 
-Create a `.claude.md` file in your project root to enforce autonomous worktree usage:
+Create a `.claude.md` file in your project root to configure agent behavior:
 
 ```markdown
 # Claude Code Project Configuration
 
-## MANDATORY: Autonomous Worktree-Based Development
+## Agent Worktree Model
 
-This project requires ALL development work to be done in dedicated git worktrees. When given a task, you MUST automatically create and switch to a worktree before making any code changes.
+This project uses persistent agent worktrees. Each Claude Code instance should have its own dedicated worktree created before starting work.
 
-### Workflow for Every Task
+### Setting Up Your Agent Worktree
 
-When a user gives you a development task (feature, bugfix, refactoring, etc.):
+Before starting any development task, ensure you have an agent worktree:
 
-1. **Create a worktree for the task:**
+1. **Check if you're in a worktree:**
    ```bash
-   ./scripts/create-worktree.sh <descriptive-name> <branch-name>
-   ```
-   - Use descriptive names: `feature-auth`, `bugfix-login`, `refactor-db`, etc.
-   - Branch name should follow project conventions (e.g., `feature/authentication`)
-
-2. **Navigate to the worktree:**
-   ```bash
-   cd ../<project-name>-worktrees/<descriptive-name>
+   git worktree list
+   cat .env.local  # Should show AGENT_NAME
    ```
 
-3. **Verify the environment:**
+2. **If not in a worktree, ask the user to create one:**
    ```bash
-   pwd
-   git status
-   git branch
-   cat .env.local  # Check your assigned ports
+   ./scripts/create-worktree.sh <agent-name>
    ```
 
-4. **Check for coordination:**
+### Working on Tasks
+
+When given a development task:
+
+1. **Ensure you're on latest main:**
    ```bash
-   # Check what other Claude sessions are working on
-   cat WORKING.lock 2>/dev/null || echo "No other active work"
+   git checkout main
+   git pull origin main
    ```
 
-5. **Do your work** in this worktree following the guidelines in `docs/CLAUDE_WORKTREE_PROMPT.md`
+2. **Create a branch for the task:**
+   ```bash
+   git checkout -b feature/task-description
+   ```
 
-### Mandatory Rules
+3. **Do your work** following the project guidelines
 
-- ✅ **DO**: Create a new worktree at the start of every task
-- ✅ **DO**: Navigate to the worktree before making code changes
-- ✅ **DO**: Make all commits from within the worktree
-- ✅ **DO**: Use the ports specified in your worktree's `.env.local`
-- ✅ **DO**: Stay focused on your assigned task to minimize conflicts
-- ❌ **NEVER**: Make code changes in the main project directory
-- ❌ **NEVER**: Start coding without creating/switching to a worktree
-- ❌ **NEVER**: Share ports with other worktrees
+4. **Complete the task:**
+   ```bash
+   git push -u origin feature/task-description
+   gh pr create
+   ```
 
-### Exception: Read-Only Operations
+5. **Return to main for next task:**
+   ```bash
+   git checkout main
+   ```
 
-You may perform these operations from the project root:
-- Reading documentation files
-- Listing existing worktrees: `git worktree list`
-- Running `./scripts/list-worktrees.sh`
-- Answering questions about project structure
-- Reading `.claude.md`, `README.md`, etc.
+### Rules
 
-But for ANY code modifications, tests, or running dev servers: **Use a worktree**.
+- ✅ **DO**: Work in your assigned agent worktree
+- ✅ **DO**: Create a new branch for each task
+- ✅ **DO**: Use ports from your `.env.local`
+- ✅ **DO**: Push branches and create PRs when work is complete
+- ❌ **NEVER**: Modify the main branch directly
+- ❌ **NEVER**: Use ports assigned to other agents
 
-### Worktree Naming Convention
+### Port Management
 
-Use clear, descriptive names:
-- Features: `feature-<name>` (e.g., `feature-oauth`, `feature-dashboard`)
-- Bugfixes: `bugfix-<name>` (e.g., `bugfix-login-error`)
-- Refactoring: `refactor-<name>` (e.g., `refactor-database`)
-- Testing: `test-<name>` (e.g., `test-payment-flow`)
-
-### After Completing Work
-
-1. Ensure all tests pass
-2. Commit your changes
-3. Push your branch: `git push -u origin <branch-name>`
-4. Navigate back to project root: `cd ../../<project-name>`
-5. Let the user know the branch is ready for review
-6. The user will handle cleanup with `./scripts/cleanup-worktree.sh`
-
-### Required Reading
-
-Before starting any task, familiarize yourself with:
-- `docs/WORKTREE_GUIDE.md` - Complete worktree documentation
-- `docs/CLAUDE_WORKTREE_PROMPT.md` - Working guidelines and best practices
-- `docs/PARALLEL_DEVELOPMENT_EXAMPLES.md` - Example workflows
+Ports are auto-assigned when the worktree is created and tracked in `agents.yaml`. Check your assigned ports:
+```bash
+cat .env.local
+```
 
 ### Available Commands
 
 ```bash
-# Create and setup a new worktree (run from project root)
-./scripts/create-worktree.sh <name> <branch>
-
-# List all active worktrees
-git worktree list
+# List all agents and their ports (run from project root)
 ./scripts/list-worktrees.sh
 
-# Clean up when done (user typically runs this)
-./scripts/cleanup-worktree.sh <name>
+# Create new agent worktree (run from project root)
+./scripts/create-worktree.sh <agent-name>
+
+# Remove agent worktree (run from project root)
+./scripts/cleanup-worktree.sh <agent-name>
 ```
-
-### Multi-Claude Coordination
-
-When multiple Claude Code sessions are running:
-- Each creates its own worktree with a unique name
-- Each worktree gets unique ports (auto-assigned)
-- Check `WORKING.lock` files to see what others are doing
-- Coordinate through the user if you need to modify overlapping code
-
----
-
-**CRITICAL**: You are starting from the project root. Your first action for any coding task must be to create a worktree. Do not make any code changes until you are in a dedicated worktree directory.
 ```
 
 ### Step 8: Update README.md
@@ -324,70 +224,46 @@ Add a section to your project's README.md:
 ```markdown
 ## Parallel Development with Git Worktrees
 
-This project **requires** git worktrees for all development work. Multiple Claude Code sessions can run in parallel, each automatically creating and managing its own isolated workspace.
+This project uses persistent agent worktrees for parallel development. Each Claude Code instance or developer gets their own isolated workspace with automatically assigned ports.
 
 ### For Claude Code Users
 
-Start Claude Code from the project root and give it tasks as normal:
+1. Have the user create an agent worktree:
+   ```bash
+   ./scripts/create-worktree.sh claude-alpha
+   ```
 
-```bash
-cd /path/to/your-project
-claude-code
-```
+2. Start Claude Code in the worktree:
+   ```bash
+   cd ../your-project-worktrees/claude-alpha
+   claude-code
+   ```
 
-Claude will automatically:
-1. Create a dedicated worktree for each task
-2. Set up isolated Python environments
-3. Assign unique development ports
-4. Navigate to the worktree and complete the work
-5. Return to project root when done
-
-The `.claude.md` file enforces this workflow - Claude cannot make code changes in the main directory.
-
-### For Manual Development
-
-Create a new worktree for your feature:
-```bash
-./scripts/create-worktree.sh my-feature feature/my-feature-name
-cd ../your-project-worktrees/my-feature
-```
-
-See [docs/WORKTREE_GUIDE.md](docs/WORKTREE_GUIDE.md) for complete documentation.
+3. The agent will create feature branches for each task
 
 ### Directory Structure
 ```
-project/                  # Main development (main branch)
-project-worktrees/       # Parallel worktrees (auto-created by Claude or manually)
-├── feature-auth/        # Authentication feature
-├── feature-api/         # API improvements
-└── bugfix-login/        # Login bug fix
+project/                      # Main repo
+project-worktrees/            # Agent worktrees
+├── agents.yaml               # Port registry
+├── claude-alpha/             # Agent workspace (ports 8001/3001)
+├── claude-beta/              # Agent workspace (ports 8002/3002)
+└── ...
 ```
 
-Each worktree is a complete, isolated workspace with its own:
-- Git branch
-- Python virtual environment
-- Development server (on unique port)
-- Environment configuration
-
-### Running Multiple Claude Sessions
-
-You can run multiple Claude Code sessions simultaneously from the same project root:
+### Running Multiple Agents
 
 ```bash
-# Terminal 1
-cd /path/to/project
-claude-code  # "Please implement OAuth authentication"
+# Create multiple agent worktrees
+./scripts/create-worktree.sh claude-backend
+./scripts/create-worktree.sh claude-frontend
+./scripts/create-worktree.sh claude-tests
 
-# Terminal 2
-cd /path/to/project
-claude-code  # "Please add tests for the payment module"
-
-# Terminal 3
-cd /path/to/project
-claude-code  # "Please refactor the database layer"
+# Each gets unique ports automatically
+./scripts/list-worktrees.sh
 ```
 
-Each Claude session will create its own worktree and work independently without conflicts.
+See [docs/WORKTREE_GUIDE.md](docs/WORKTREE_GUIDE.md) for complete documentation.
 ```
 
 ### Step 9: Commit the Integration
@@ -397,80 +273,68 @@ Commit all the changes:
 ```bash
 git add .gitignore .env.example .claude.md tox.ini README.md docs/ scripts/
 git add .gitmodules tools/  # If using submodules
-git commit -m "Add git-worktree-tools for parallel development
+git commit -m "Add git-worktree-tools for parallel agent development
 
 - Add git-worktree-tools as submodule
-- Update .gitignore for worktree patterns
+- Update .gitignore for agent registry
 - Add .env.example template
-- Create .claude.md to enforce autonomous worktree usage
+- Create .claude.md for agent workflow
 - Update tox.ini for port configuration
-- Add worktree documentation
-
-Claude Code sessions will now automatically create and use
-worktrees for all development work."
+- Add worktree documentation"
 ```
 
 ### Step 10: Test the Integration
 
-Test creating a worktree:
+Test creating an agent worktree:
 
 ```bash
-./scripts/create-worktree.sh test-worktree test-branch
+./scripts/create-worktree.sh tmp-test
 ```
 
 Verify it was created:
 
 ```bash
 git worktree list
+./scripts/list-worktrees.sh
 ```
 
 Navigate to it and test:
 
 ```bash
-cd ../[project-name]-worktrees/test-worktree
+cd ../[project-name]-worktrees/tmp-test
 source .venv/bin/activate
-python --version
+cat .env.local  # Check assigned ports
 ```
 
 Clean up the test worktree:
 
 ```bash
 cd ../../[project-name]
-./scripts/cleanup-worktree.sh test-worktree
+./scripts/cleanup-worktree.sh tmp-test
 ```
 
 ## Project-Specific Customizations
 
 ### Adjusting create-worktree.sh
 
-If your project has specific setup requirements, you may need to customize the create-worktree script:
+If your project has specific setup requirements, customize the script:
 
 1. **Custom dependency installation:**
-   Edit `tools/worktree/scripts/create-worktree.sh` (or your copied version) to add project-specific installation steps.
+   Add project-specific installation steps after the standard dependency installation.
 
 2. **Database setup:**
    Add database migration commands:
    ```bash
-   # After dependency installation, add:
    python manage.py migrate  # Django
    alembic upgrade head      # SQLAlchemy
    ```
 
 3. **Environment variables:**
-   Modify the `.env.local` template in the script to include project-specific variables.
-
-4. **Git hooks path:**
-   Update the git hooks path if you use shared hooks:
-   ```bash
-   git config core.hooksPath /path/to/your/hooks
-   ```
+   Modify the `.env.local` template to include project-specific variables.
 
 ### Custom Port Ranges
 
-If ports 8000-8003 are already in use, update the default ports in:
-- `.env.example` (template defaults)
-- `create-worktree.sh` (generated .env.local)
-- Your project documentation
+If ports 8001+ are already in use, modify the `get_next_available_port` function in `create-worktree.sh` to start from a different base port.
 
 ### Frontend Projects
 
@@ -478,8 +342,7 @@ If you have a frontend that needs separate port configuration:
 
 1. Update `.env.local` template in `create-worktree.sh`:
    ```bash
-   FRONTEND_PORT=3001
-   VITE_PORT=5174  # Or whatever your frontend uses
+   VITE_PORT=$((FRONTEND_PORT + 100))
    ```
 
 2. Update frontend start command to use the environment variable.
@@ -499,103 +362,60 @@ git submodule update --init --recursive
 git submodule update --remote
 ```
 
-### Python virtual environment issues
+### agents.yaml not found
 
-Make sure your project has one of:
-- requirements.txt
-- pyproject.toml with [project] section
-- setup.py
+The file is created automatically when you create your first agent worktree:
+```bash
+./scripts/create-worktree.sh my-first-agent
+```
 
-### Worktree creation fails
+### Port conflicts
 
-Check that:
-1. You're in a git repository: `git status`
-2. You have a main/master branch
-3. The branch name doesn't already exist: `git branch -a`
+Check the registry and adjust if needed:
+```bash
+./scripts/list-worktrees.sh
+cat ../[project]-worktrees/agents.yaml
+```
 
 ## Using with Claude Code
 
-Once integrated, Claude Code will **automatically** use worktrees for all development work.
+Once integrated, create agent worktrees before starting Claude Code sessions.
 
-### Starting a Session
+### Recommended Setup
 
-Simply start Claude Code from your project root:
+1. Create agent worktrees for each Claude instance:
+   ```bash
+   ./scripts/create-worktree.sh claude-1
+   ./scripts/create-worktree.sh claude-2
+   ```
 
-```bash
-cd /path/to/your-project
-claude-code
-```
+2. Start Claude in each worktree:
+   ```bash
+   # Terminal 1
+   cd ../project-worktrees/claude-1
+   claude-code
 
-Then give Claude a task as you normally would:
+   # Terminal 2
+   cd ../project-worktrees/claude-2
+   claude-code
+   ```
 
-```
-"Please implement OAuth authentication for the API"
-"Add comprehensive tests for the payment module"
-"Refactor the database connection pooling"
-```
+3. Give each agent their task. They'll create branches and work independently.
 
-### What Happens Automatically
+### Agent Workflow
 
-Claude will:
-1. Read the `.claude.md` configuration file
-2. Create a new worktree with a descriptive name
-3. Navigate to the worktree directory
-4. Set up the isolated environment
-5. Check for coordination with other Claude sessions (via WORKING.lock)
-6. Complete the development work
-7. Run tests and ensure quality
-8. Commit changes to the branch
-9. Return to the project root
+Each agent will:
+1. Start in detached HEAD mode on main
+2. Create a feature branch when given a task
+3. Work on the task
+4. Push and create a PR
+5. Return to main for the next task
 
-### Running Multiple Sessions in Parallel
-
-You can start multiple Claude Code sessions from the same project root:
-
-```bash
-# Terminal 1 - OAuth feature
-cd /path/to/project
-claude-code  # "Implement OAuth authentication"
-
-# Terminal 2 - Testing
-cd /path/to/project
-claude-code  # "Add tests for payment module"
-
-# Terminal 3 - Refactoring
-cd /path/to/project
-claude-code  # "Refactor database layer"
-```
-
-Each session will:
-- Create its own uniquely-named worktree
-- Get assigned unique development ports
-- Work independently without conflicts
-- Coordinate through WORKING.lock files if needed
-
-### Manual Workflow (Optional)
-
-If you prefer to create worktrees manually before starting Claude:
-
-```bash
-./scripts/create-worktree.sh my-feature feature/my-feature
-cd ../your-project-worktrees/my-feature
-claude-code
-```
-
-Then provide context:
-```
-You are in a git worktree for parallel development.
-Please read docs/CLAUDE_WORKTREE_PROMPT.md and work on: <task description>
-```
+The worktree persists across tasks, so agents don't need to recreate their environment.
 
 ## Next Steps
 
 1. Read [docs/WORKTREE_GUIDE.md](docs/WORKTREE_GUIDE.md) for usage instructions
 2. Review [docs/PARALLEL_DEVELOPMENT_EXAMPLES.md](docs/PARALLEL_DEVELOPMENT_EXAMPLES.md) for workflow examples
-3. Try creating a worktree and working on a small feature
+3. Create your first agent worktree
 4. Share the workflow with your team
-
-## Support
-
-For issues with git-worktree-tools, see the [main repository](https://github.com/yourusername/git-worktree-tools).
-
-For project-specific integration issues, consult your team lead or open an issue in your project repository.
