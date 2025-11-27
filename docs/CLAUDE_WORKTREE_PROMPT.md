@@ -27,7 +27,6 @@ This is a **persistent worktree** that you will use across multiple tasks. You s
 2. Update to latest main:
    ```bash
    git fetch origin
-   git checkout main
    git reset --hard origin/main
    ```
 
@@ -60,8 +59,8 @@ When given a task:
 
 4. **Return to main for next task:**
    ```bash
-   git checkout main
-   git pull
+   git fetch origin
+   git reset --hard origin/main
    ```
 
 ## Development Commands

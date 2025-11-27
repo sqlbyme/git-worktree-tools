@@ -13,7 +13,7 @@ if [ -z "$AGENT_NAME" ]; then
     echo ""
     echo "Available agents:"
     if [ -f "$AGENTS_YAML" ]; then
-        grep -E "^  [a-zA-Z]" "$AGENTS_YAML" | sed 's/://' | sed 's/^  /  - /'
+        grep -E "^  [a-zA-Z0-9_-]" "$AGENTS_YAML" | sed 's/://' | sed 's/^  /  - /'
     else
         echo "  No agents registered"
     fi
@@ -52,14 +52,14 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         # This removes the agent name line and all indented lines that follow until the next agent
         awk -v agent="  $AGENT_NAME:" '
             $0 == agent { skip = 1; next }
-            /^  [a-zA-Z]/ { skip = 0 }
+            /^  [a-zA-Z0-9_-]/ { skip = 0 }
             !skip { print }
         ' "$AGENTS_YAML" > "$AGENTS_YAML.tmp"
         mv "$AGENTS_YAML.tmp" "$AGENTS_YAML"
         echo "Agent removed from registry: $AGENT_NAME"
 
         # Remove agents.yaml if no agents remain
-        if ! grep -q "^  [a-zA-Z]" "$AGENTS_YAML" 2>/dev/null; then
+        if ! grep -q "^  [a-zA-Z0-9_-]" "$AGENTS_YAML" 2>/dev/null; then
             rm "$AGENTS_YAML"
             echo "Registry file removed (no remaining agents)"
         fi

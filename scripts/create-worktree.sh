@@ -80,11 +80,11 @@ else
 EOF
 fi
 
-# Configure shared hooks path if it exists
-if [ -d "/Users/medwards/Documents/git-hooks/python-tox" ]; then
+# Configure shared hooks path if set via environment variable
+if [ -n "$GIT_HOOKS_PATH" ] && [ -d "$GIT_HOOKS_PATH" ]; then
     echo "Configuring shared git hooks..."
     cd "$WORKTREE_PATH"
-    git config core.hooksPath /Users/medwards/Documents/git-hooks/python-tox
+    git config core.hooksPath "$GIT_HOOKS_PATH"
     cd "$PROJECT_ROOT"
 fi
 

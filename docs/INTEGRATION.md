@@ -165,8 +165,8 @@ When given a development task:
 
 1. **Ensure you're on latest main:**
    ```bash
-   git checkout main
-   git pull origin main
+   git fetch origin
+   git reset --hard origin/main
    ```
 
 2. **Create a branch for the task:**
@@ -184,7 +184,8 @@ When given a development task:
 
 5. **Return to main for next task:**
    ```bash
-   git checkout main
+   git fetch origin
+   git reset --hard origin/main
    ```
 
 ### Rules

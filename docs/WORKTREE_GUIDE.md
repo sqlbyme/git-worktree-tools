@@ -78,8 +78,8 @@ When you receive a new task in your agent worktree:
 
 1. Make sure you're on the latest main:
    ```bash
-   git checkout main
-   git pull origin main
+   git fetch origin
+   git reset --hard origin/main
    ```
 
 2. Create a branch for the task:
@@ -114,8 +114,8 @@ When your work is complete:
 
 4. Return to main for the next task:
    ```bash
-   git checkout main
-   git pull
+   git fetch origin
+   git reset --hard origin/main
    ```
 
 ### Removing an Agent Worktree
@@ -178,7 +178,6 @@ git checkout -b feature/my-task
 ### Updating main in your worktree
 ```bash
 git fetch origin
-git checkout main
 git reset --hard origin/main
 ```
 
@@ -189,7 +188,11 @@ All worktrees share the same git repository, so:
 - Branches are shared across all worktrees
 
 ### Using with git hooks
-If you have shared git hooks configured, they're automatically applied to new worktrees. The create-worktree script checks for hooks at `/Users/medwards/Documents/git-hooks/python-tox`.
+If you have shared git hooks, set the `GIT_HOOKS_PATH` environment variable before creating worktrees:
+```bash
+export GIT_HOOKS_PATH=/path/to/your/hooks
+./scripts/create-worktree.sh my-agent
+```
 
 ### Database isolation
 Each agent gets its own SQLite database by default (configured in `.env.local`). This prevents conflicts when running migrations or tests.
