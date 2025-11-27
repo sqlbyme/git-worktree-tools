@@ -5,7 +5,7 @@ skipsdist = False
 [testenv]
 description = Base environment configuration
 setenv =
-    WORKTREE_NAME = {env:WORKTREE_NAME:main}
+    AGENT_NAME = {env:AGENT_NAME:main}
     PYTHONPATH = {toxinidir}
     DEV_PORT = {env:DEV_PORT:8000}
     FRONTEND_PORT = {env:FRONTEND_PORT:3000}

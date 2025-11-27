@@ -1,38 +1,67 @@
-# Claude Code Worktree Prompt Template
+# Claude Code Agent Worktree Prompt Template
 
-Copy and customize this when starting Claude Code in a worktree:
+Copy and customize this when starting Claude Code in an agent worktree:
 
 ---
 
-You are working in a git worktree for parallel development on this project.
+You are working in a persistent agent worktree for parallel development on this project.
 
-## Worktree Context
-- **Location**: `[PATH_TO_WORKTREE]`
-- **Branch**: `[BRANCH_NAME]`
-- **Backend Port**: `[PORT_NUMBER]` (set in .env.local)
-- **Frontend Port**: `[PORT_NUMBER]` (set in .env.local)
+## Agent Context
+- **Agent Name**: `[AGENT_NAME]`
+- **Worktree Location**: `[PATH_TO_WORKTREE]`
+- **Dev Port**: `[DEV_PORT]` (from .env.local)
+- **Frontend Port**: `[FRONTEND_PORT]` (from .env.local)
 
-## Your Scope
-[Describe the specific feature, refactoring, or task this worktree is focused on]
+## Your Workspace
 
-Examples:
-- Implement OAuth authentication endpoints
-- Refactor database models for better performance
-- Build new dashboard UI component
-- Add comprehensive test coverage for payment module
+This is a **persistent worktree** that you will use across multiple tasks. You start in detached HEAD mode on main and create feature branches when given tasks.
 
-## Before You Start
-1. Check git status: `git status`
-2. Check for WORKING.lock file - if it exists, read it to understand what others are working on
-3. Review recent work: `git log -5 --oneline`
-4. Verify your environment: `source .venv/bin/activate && python --version`
+## Before Starting Any Task
 
-## Working Guidelines
-- Stay focused on your assigned scope to minimize conflicts
-- Make frequent, small commits with clear messages
-- Run tests before committing: `tox -e test`
-- Check code formatting: `tox -e format-check`
-- If you need to modify files outside your scope, check with the user first
+1. Check your current state:
+   ```bash
+   git status
+   cat .env.local
+   ```
+
+2. Update to latest main:
+   ```bash
+   git fetch origin
+   git reset --hard origin/main
+   ```
+
+3. Verify your environment:
+   ```bash
+   source .venv/bin/activate
+   python --version
+   ```
+
+## Task Workflow
+
+When given a task:
+
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b feature/task-description
+   ```
+
+2. **Do your work:**
+   - Make changes
+   - Commit frequently with clear messages
+   - Run tests: `tox -e test`
+   - Check formatting: `tox -e format-check`
+
+3. **Complete the task:**
+   ```bash
+   git push -u origin feature/task-description
+   gh pr create --title "feat: description" --body "Details"
+   ```
+
+4. **Return to main for next task:**
+   ```bash
+   git fetch origin
+   git reset --hard origin/main
+   ```
 
 ## Development Commands
 - Start backend: `tox -e dev` (uses port from .env.local)
@@ -41,16 +70,24 @@ Examples:
 - Lint code: `tox -e lint`
 - Type check: `tox -e type`
 
-## Project Structure
-[Add brief overview of relevant project structure]
+## Working Guidelines
+
+- Stay focused on the assigned task
+- Use your assigned ports (check .env.local)
+- Make frequent, small commits with clear messages
+- Run tests before pushing
+- If you need to modify files outside your task scope, check with the user first
 
 ## Completion Checklist
+
 When you've completed your work:
 - [ ] All tests passing
 - [ ] Code formatted and linted
 - [ ] Type checking passes
 - [ ] Changes committed with clear messages
-- [ ] No merge conflicts with main branch
-- [ ] Documentation updated if needed
+- [ ] Branch pushed to origin
+- [ ] PR created (if requested)
 
-Ready to start! What would you like to work on first?
+---
+
+Ready to start! What task would you like me to work on?

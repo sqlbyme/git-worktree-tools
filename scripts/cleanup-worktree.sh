@@ -1,40 +1,67 @@
 #!/bin/bash
 set -e
 
-WORKTREE_NAME=$1
+AGENT_NAME=$1
 
-if [ -z "$WORKTREE_NAME" ]; then
-    echo "Usage: $0 <worktree-name>"
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+WORKTREE_CONTAINER="${PROJECT_ROOT}-worktrees"
+WORKTREE_PATH="$WORKTREE_CONTAINER/$AGENT_NAME"
+AGENTS_YAML="$WORKTREE_CONTAINER/agents.yaml"
+
+if [ -z "$AGENT_NAME" ]; then
+    echo "Usage: $0 <agent-name>"
     echo ""
-    echo "Available worktrees:"
+    echo "Available agents:"
+    if [ -f "$AGENTS_YAML" ]; then
+        grep -E "^  [a-zA-Z0-9_-]" "$AGENTS_YAML" | sed 's/://' | sed 's/^  /  - /'
+    else
+        echo "  No agents registered"
+    fi
+    echo ""
+    echo "All worktrees:"
     git worktree list
     exit 1
 fi
 
-PROJECT_ROOT=$(git rev-parse --show-toplevel)
-WORKTREE_CONTAINER="${PROJECT_ROOT}-worktrees"
-WORKTREE_PATH="$WORKTREE_CONTAINER/$WORKTREE_NAME"
-
 if [ ! -d "$WORKTREE_PATH" ]; then
-    echo "Worktree not found: $WORKTREE_PATH"
+    echo "Agent worktree not found: $WORKTREE_PATH"
     exit 1
 fi
 
-# Get the branch name
-cd "$WORKTREE_PATH"
-BRANCH_NAME=$(git branch --show-current)
-cd "$PROJECT_ROOT"
+# Show agent info before removal
+echo "Agent: $AGENT_NAME"
+echo "Path: $WORKTREE_PATH"
+if [ -f "$AGENTS_YAML" ]; then
+    DEV_PORT=$(grep -A3 "^  $AGENT_NAME:" "$AGENTS_YAML" | grep "dev_port:" | awk '{print $2}')
+    FRONTEND_PORT=$(grep -A3 "^  $AGENT_NAME:" "$AGENTS_YAML" | grep "frontend_port:" | awk '{print $2}')
+    echo "Dev Port: $DEV_PORT"
+    echo "Frontend Port: $FRONTEND_PORT"
+fi
+echo ""
 
-read -p "Remove worktree '$WORKTREE_NAME' (branch: $BRANCH_NAME)? [y/N] " -n 1 -r
+read -p "Remove agent worktree '$AGENT_NAME'? [y/N] " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    git worktree remove "$WORKTREE_PATH"
+    # Remove the worktree (force needed because of venv and other generated files)
+    git worktree remove --force "$WORKTREE_PATH"
     echo "Worktree removed: $WORKTREE_PATH"
 
-    read -p "Delete branch '$BRANCH_NAME'? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git branch -d "$BRANCH_NAME" || git branch -D "$BRANCH_NAME"
-        echo "Branch deleted: $BRANCH_NAME"
+    # Remove agent from agents.yaml
+    if [ -f "$AGENTS_YAML" ]; then
+        # Create temp file without this agent's entry
+        # This removes the agent name line and all indented lines that follow until the next agent
+        awk -v agent="  $AGENT_NAME:" '
+            $0 == agent { skip = 1; next }
+            /^  [a-zA-Z0-9_-]/ { skip = 0 }
+            !skip { print }
+        ' "$AGENTS_YAML" > "$AGENTS_YAML.tmp"
+        mv "$AGENTS_YAML.tmp" "$AGENTS_YAML"
+        echo "Agent removed from registry: $AGENT_NAME"
+
+        # Remove agents.yaml if no agents remain
+        if ! grep -q "^  [a-zA-Z0-9_-]" "$AGENTS_YAML" 2>/dev/null; then
+            rm "$AGENTS_YAML"
+            echo "Registry file removed (no remaining agents)"
+        fi
     fi
 fi

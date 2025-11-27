@@ -2,29 +2,30 @@
 
 ## Quick Start
 
-### Creating a New Worktree
+### Creating an Agent Worktree
 
 ```bash
-./scripts/create-worktree.sh <worktree-name> [branch-name]
+./scripts/create-worktree.sh <agent-name> [base-branch]
 ```
 
 Example:
 ```bash
-./scripts/create-worktree.sh feature-auth feature/auth-endpoints
+./scripts/create-worktree.sh claude-alpha main
 ```
 
 This will:
-1. Create a new worktree in `../<project>-worktrees/feature-auth/`
-2. Create and checkout branch `feature/auth-endpoints`
-3. Set up a fresh virtual environment
-4. Install all dependencies
-5. Create a `.env.local` file
+1. Create a new worktree in `../<project>-worktrees/claude-alpha/`
+2. Checkout in detached HEAD mode at `main`
+3. Auto-assign unique ports (tracked in `agents.yaml`)
+4. Set up a fresh virtual environment
+5. Install all dependencies
+6. Create a `.env.local` file with assigned ports
 
-### Working in a Worktree
+### Working in an Agent Worktree
 
 1. Navigate to the worktree:
    ```bash
-   cd ../<project>-worktrees/feature-auth
+   cd ../<project>-worktrees/claude-alpha
    ```
 
 2. Activate the virtual environment:
@@ -32,48 +33,67 @@ This will:
    source .venv/bin/activate
    ```
 
-3. Check the assigned port in `.env.local` and adjust if needed
+3. When given a task, create a feature branch:
+   ```bash
+   git checkout -b feature/my-task
+   ```
 
-4. Start development:
+4. Check your assigned ports in `.env.local`:
+   ```bash
+   cat .env.local
+   ```
+
+5. Start development:
    ```bash
    tox -e dev
    ```
 
 ### Port Assignments
 
-To avoid conflicts, each worktree should use different ports:
+Ports are automatically assigned and tracked in `agents.yaml`:
 
-| Worktree | Backend Port | Frontend Port |
-|----------|-------------|---------------|
-| main     | 8000        | 3000          |
-| worktree-1 | 8001      | 3001          |
-| worktree-2 | 8002      | 3002          |
-| worktree-3 | 8003      | 3003          |
+| Agent | Dev Port | Frontend Port |
+|-------|----------|---------------|
+| main  | 8000     | 3000          |
+| agent-1 | 8001   | 3001          |
+| agent-2 | 8002   | 3002          |
+| agent-3 | 8003   | 3003          |
 
-Edit `.env.local` in each worktree to set unique ports.
+The `create-worktree.sh` script automatically finds the next available ports.
 
-### Coordination with Claude Code
+### Listing Active Agents
 
-When starting Claude Code in a worktree, provide this context:
-
-```
-You are working in a git worktree for parallel development.
-
-Worktree location: ../<project>-worktrees/<name>
-Branch: <branch-name>
-Ports: Backend=<port>, Frontend=<port>
-
-Scope: <describe specific feature/area>
-
-Before starting work:
-1. Run: git status
-2. Check for WORKING.lock file
-3. Review recent commits: git log -5 --oneline
-
-Focus on the specified scope to avoid conflicts with other parallel work.
+```bash
+./scripts/list-worktrees.sh
 ```
 
-### Merging Back to Main
+This shows:
+- All registered agents with their port assignments
+- Git worktree status
+- Local branches
+
+### Starting a New Task
+
+When you receive a new task in your agent worktree:
+
+1. Make sure you're on the latest main:
+   ```bash
+   git fetch origin
+   git reset --hard origin/main
+   ```
+
+2. Create a branch for the task:
+   ```bash
+   git checkout -b feature/implement-oauth
+   ```
+
+3. Do your work, committing frequently:
+   ```bash
+   git add .
+   git commit -m "feat: add OAuth configuration"
+   ```
+
+### Completing Work
 
 When your work is complete:
 
@@ -82,52 +102,49 @@ When your work is complete:
    tox -e test,lint,type
    ```
 
-2. Commit your changes:
+2. Push your branch:
    ```bash
-   git add .
-   git commit -m "feat: your feature description"
+   git push -u origin feature/implement-oauth
    ```
 
-3. Push your branch:
+3. Create a pull request:
    ```bash
-   git push -u origin <branch-name>
+   gh pr create --title "feat: implement OAuth" --body "Description of changes"
    ```
 
-4. Create a pull request on GitHub:
+4. Return to main for the next task:
    ```bash
-   gh pr create --title "Your feature title" --body "Description"
+   git fetch origin
+   git reset --hard origin/main
    ```
 
-5. After merging, clean up the worktree:
-   ```bash
-   cd ../../<project>
-   ./scripts/cleanup-worktree.sh <worktree-name>
-   ```
+### Removing an Agent Worktree
 
-### Listing Active Worktrees
+When an agent is no longer needed:
 
 ```bash
-./scripts/list-worktrees.sh
+cd ../../<project>
+./scripts/cleanup-worktree.sh claude-alpha
 ```
 
-Or directly:
-```bash
-git worktree list
-```
+This removes the worktree and frees up the ports for reuse.
 
-### Best Practices
+## Best Practices
 
-1. **One feature per worktree**: Keep worktrees focused on a single feature or task
-2. **Clear naming**: Use descriptive worktree names like `feature-auth`, `bugfix-login`, `refactor-api`
-3. **Regular commits**: Commit frequently in your worktree branch
-4. **Avoid conflicts**: Coordinate with other developers/Claude instances on what files you're modifying
-5. **Clean up**: Remove worktrees after merging to keep things tidy
-6. **Lock file**: Create a `WORKING.lock` file with your name/task when starting work on shared areas
+1. **One agent per worktree**: Each worktree is dedicated to a single agent
+2. **One task at a time**: Complete and push work before starting new tasks
+3. **Clear naming**: Use descriptive agent names like `claude-backend`, `claude-frontend`
+4. **Regular commits**: Commit frequently within your task branch
+5. **Clean branches**: Delete merged branches to keep the repo tidy
+6. **Use assigned ports**: Always use the ports in your `.env.local`
 
 ## Troubleshooting
 
 ### Port already in use
-Edit `.env.local` in your worktree and change the port numbers.
+Check which agent has the port:
+```bash
+./scripts/list-worktrees.sh
+```
 
 ### Worktree won't remove
 ```bash
@@ -141,7 +158,7 @@ git worktree prune  # Clean up deleted worktrees
 ```
 
 ### Virtual environment issues
-If the virtual environment is corrupted, you can recreate it:
+Recreate the virtual environment:
 ```bash
 cd <worktree-path>
 rm -rf .venv
@@ -150,30 +167,32 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Branch already exists
-If creating a worktree fails because the branch exists:
+### Detached HEAD state
+This is expected! Create a branch when starting a task:
 ```bash
-# Delete the existing branch first
-git branch -D <branch-name>
-# Then try creating the worktree again
+git checkout -b feature/my-task
 ```
 
 ## Advanced Usage
 
-### Creating a worktree from a remote branch
+### Updating main in your worktree
 ```bash
 git fetch origin
-./scripts/create-worktree.sh my-worktree origin/feature-branch
+git reset --hard origin/main
 ```
 
 ### Sharing work between worktrees
 All worktrees share the same git repository, so:
 - Commits in one worktree are immediately visible in others
-- You can switch between worktrees and see all branches
-- Stashing works across worktrees
+- You can cherry-pick commits between worktrees
+- Branches are shared across all worktrees
 
 ### Using with git hooks
-If you have shared git hooks configured, they'll automatically be applied to new worktrees. The create-worktree script checks for hooks at `/Users/medwards/Documents/git-hooks/python-tox`.
+If you have shared git hooks, set the `GIT_HOOKS_PATH` environment variable before creating worktrees:
+```bash
+export GIT_HOOKS_PATH=/path/to/your/hooks
+./scripts/create-worktree.sh my-agent
+```
 
 ### Database isolation
-Each worktree gets its own SQLite database by default (configured in `.env.local`). This prevents conflicts when running migrations or tests.
+Each agent gets its own SQLite database by default (configured in `.env.local`). This prevents conflicts when running migrations or tests.
