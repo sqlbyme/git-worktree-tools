@@ -218,8 +218,8 @@ gh pr create
 
 # CI runs on the PR
 # After approval and merge, agent continues with next task
-git checkout main
-git pull
+git fetch origin
+git reset --hard origin/main
 ```
 
 ## Best Practices from Examples
